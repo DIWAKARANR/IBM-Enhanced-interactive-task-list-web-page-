@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Interactive Task List</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --background-color: #f5f5f5;
+            --text-color: #333;
+            --error-color: #e74c3c;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+        }
+
+        #task-form {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        #task-input {
+            flex-grow: 1;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px 0 0 4px;
+        }
+
+        #add-task-btn {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #add-task-btn:hover {
+            background-color: #2980b9;
+        }
+
+        #error-message {
+            color: var(--error-color);
+            margin-bottom: 10px;
+            display: none;
+        }
+
+        #task-list {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            animation: fadeIn 0.5s;
+        }
+
+        .task-item.completed {
+            background-color: #e8f5e9;
+            text-decoration: line-through;
+            color: #777;
+        }
+
+        .task-checkbox {
+            margin-right: 10px;
+        }
+
+        .task-text {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .edit-btn, .delete-btn {
+            padding: 5px 10px;
+            background-color: #f0f0f0;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .edit-btn:hover {
+            background-color: #e0e0e0;
+        }
+
+        .delete-btn:hover {
+            background-color: var(--error-color);
+            color: white;
+        }
+
+        #sort-options {
+            margin-bottom: 20px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-10px); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .shake {
+            animation: shake 0.5s;
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                padding: 10px;
+            }
+
+            #task-form {
+                flex-direction: column;
+            }
+
+            #task-input, #add-task-btn {
+                width: 100%;
+                border-radius: 4px;
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Enhanced Task List</h1>
+        <div id="error-message"></div>
+        <form id="task-form">
+            <input type="text" id="task-input" placeholder="Enter a new task" required>
+            <button type="submit" id="add-task-btn">Add Task</button>
+        </form>
+        <div id="sort-options">
+            <label>Sort by: </label>
+            <select id="sort-select">
+                <option value="default">Default</option>
+                <option value="alphabetical">Alphabetical</option>
+                <option value="completed">Completed</option>
+            </select>
+        </div>
+        <ul id="task-list"></ul>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const taskForm = document.getElementById('task-form');
+            const taskInput = document.getElementById('task-input');
+            const taskList = document.getElementById('task-list');
+            const errorMessage = document.getElementById('error-message');
+            const sortSelect = document.getElementById('sort-select');
+
+            let tasks = [];
+
+            taskForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                addTask();
+            });
+
+            sortSelect.addEventListener('change', sortTasks);
+
+            function addTask() {
+                const taskText = taskInput.value.trim();
+                if (taskText === '') {
+                    showError('Please enter a task');
+                    return;
+                }
+
+                const task = {
+                    id: Date.now(),
+                    text: taskText,
+                    completed: false
+                };
+
+                tasks.push(task);
+                renderTask(task);
+                taskInput.value = '';
+                hideError();
+            }
+
+            function renderTask(task) {
+                const li = document.createElement('li');
+                li.className = 'task-item';
+                li.dataset.id = task.id;
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'task-checkbox';
+                checkbox.checked = task.completed;
+                checkbox.addEventListener('change', () => toggleTaskComplete(task.id));
+
+                const span = document.createElement('span');
+                span.className = 'task-text';
+                span.textContent = task.text;
+
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'task-actions';
+
+                const editBtn = document.createElement('button');
+                editBtn.className = 'edit-btn';
+                editBtn.textContent = 'Edit';
+                editBtn.addEventListener('click', () => editTask(task.id));
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-btn';
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.addEventListener('click', () => deleteTask(task.id));
+
+                actionsDiv.appendChild(editBtn);
+                actionsDiv.appendChild(deleteBtn);
+
+                li.appendChild(checkbox);
+                li.appendChild(span);
+                li.appendChild(actionsDiv);
+
+                if (task.completed) {
+                    li.classList.add('completed');
+                }
+
+                taskList.appendChild(li);
+            }
+
+            function toggleTaskComplete(id) {
+                const task = tasks.find(t => t.id === id);
+                if (task) {
+                    task.completed = !task.completed;
+                    const li = document.querySelector(`.task-item[data-id="${id}"]`);
+                    li.classList.toggle('completed');
+                }
+            }
+
+            function editTask(id) {
+                const task = tasks.find(t => t.id === id);
+                if (task) {
+                    const newText = prompt('Edit task:', task.text);
+                    if (newText !== null) {
+                        task.text = newText.trim();
+                        const li = document.querySelector(`.task-item[data-id="${id}"]`);
+                        li.querySelector('.task-text').textContent = task.text;
+                    }
+                }
+            }
+
+            function deleteTask(id) {
+                const index = tasks.findIndex(t => t.id === id);
+                if (index !== -1) {
+                    tasks.splice(index, 1);
+                    const li = document.querySelector(`.task-item[data-id="${id}"]`);
+                    li.style.animation = 'fadeOut 0.5s';
+                    li.addEventListener('animationend', () => {
+                        li.remove();
+                    });
+                }
+            }
+
+            function sortTasks() {
+                const sortBy = sortSelect.value;
+                switch (sortBy) {
+                    case 'alphabetical':
+                        tasks.sort((a, b) => a.text.localeCompare(b.text));
+                        break;
+                    case 'completed':
+                        tasks.sort((a, b) => b.completed - a.completed);
+                        break;
+                    default:
+                        tasks.sort((a, b) => a.id - b.id);
+                }
+                renderAllTasks();
+            }
+
+            function renderAllTasks() {
+                taskList.innerHTML = '';
+                tasks.forEach(renderTask);
+            }
+
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+                errorMessage.classList.add('shake');
+                setTimeout(() => {
+                    errorMessage.classList.remove('shake');
+                }, 500);
+            }
+
+            function hideError() {
+                errorMessage.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
+  
